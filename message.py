@@ -24,6 +24,14 @@ class Message:
             priority: 优先级 / Priority (1-5, 5 is highest)
             target: 目标订阅者 / Target subscriber (None for broadcast)
         """
+        # 验证优先级 / Validate priority
+        if not isinstance(priority, int) or priority < 1 or priority > 5:
+            priority = 1
+            
+        # 验证消息类型 / Validate message type
+        if msg_type not in ['text', 'json', 'binary']:
+            msg_type = 'text'
+            
         self.id = str(uuid.uuid4())
         self.content = content
         self.msg_type = msg_type

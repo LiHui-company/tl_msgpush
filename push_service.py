@@ -45,13 +45,17 @@ class PushService:
         @self.app.route('/api/subscribe', methods=['POST'])
         def subscribe():
             """订阅服务 / Subscribe to service"""
-            data = request.json
+            data = request.json or {}
             subscriber_id = data.get('subscriber_id')
             name = data.get('name')
             tags = data.get('tags', [])
             
             if not subscriber_id:
                 return jsonify({'error': '缺少订阅者ID / Missing subscriber_id'}), 400
+            
+            # 验证tags是列表 / Validate tags is a list
+            if not isinstance(tags, list):
+                tags = []
                 
             subscriber = self.subscriber_manager.register(subscriber_id, name, tags)
             if subscriber is None:
@@ -65,7 +69,7 @@ class PushService:
         @self.app.route('/api/unsubscribe', methods=['POST'])
         def unsubscribe():
             """取消订阅 / Unsubscribe from service"""
-            data = request.json
+            data = request.json or {}
             subscriber_id = data.get('subscriber_id')
             
             if not subscriber_id:
@@ -80,7 +84,7 @@ class PushService:
         @self.app.route('/api/push', methods=['POST'])
         def push_message():
             """推送消息 / Push message"""
-            data = request.json
+            data = request.json or {}
             content = data.get('content')
             msg_type = data.get('type', 'text')
             priority = data.get('priority', 1)
@@ -88,6 +92,18 @@ class PushService:
             
             if not content:
                 return jsonify({'error': '缺少消息内容 / Missing content'}), 400
+            
+            # 验证并规范化优先级 / Validate and normalize priority
+            try:
+                priority = int(priority)
+                if priority < 1 or priority > 5:
+                    priority = 1
+            except (TypeError, ValueError):
+                priority = 1
+            
+            # 验证消息类型 / Validate message type
+            if msg_type not in Config.SUPPORTED_MESSAGE_TYPES:
+                msg_type = 'text'
                 
             message = Message(content, msg_type, priority, target)
             self.message_queue.add(message)
@@ -102,7 +118,7 @@ class PushService:
         @self.app.route('/api/pull', methods=['POST'])
         def pull_messages():
             """拉取消息 / Pull messages"""
-            data = request.json
+            data = request.json or {}
             subscriber_id = data.get('subscriber_id')
             
             if not subscriber_id:
@@ -127,7 +143,7 @@ class PushService:
         @self.app.route('/api/heartbeat', methods=['POST'])
         def heartbeat():
             """心跳检测 / Heartbeat check"""
-            data = request.json
+            data = request.json or {}
             subscriber_id = data.get('subscriber_id')
             
             if not subscriber_id:
