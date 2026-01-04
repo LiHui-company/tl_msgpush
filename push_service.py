@@ -7,7 +7,6 @@ from flask import Flask, request, jsonify
 from message import Message, MessageQueue
 from subscriber import SubscriberManager
 from config import Config
-import threading
 import time
 
 

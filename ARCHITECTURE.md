@@ -1,17 +1,16 @@
-"""
-系统架构说明 / System Architecture Documentation
-推栏消息推送原型示意 / Push Notification Prototype Schematic
-"""
+# 系统架构说明 / System Architecture Documentation
+# 推栏消息推送原型示意 / Push Notification Prototype Schematic
 
 # ============================================================
 # 系统架构 / System Architecture
 # ============================================================
 
-"""
+
 推栏消息推送系统采用订阅/发布模式，支持广播和定向消息推送。
 
 The Push Notification System uses a pub/sub pattern, supporting both 
 broadcast and targeted message delivery.
+
 
 ## 核心组件 / Core Components
 
@@ -162,4 +161,4 @@ GET  /api/subscribers    - 订阅者列表
    - 消息吞吐量
    - 订阅者活跃度
    - 系统性能指标
-"""
+
