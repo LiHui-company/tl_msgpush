@@ -57,11 +57,11 @@ def test_subscriber():
     assert sub.id == "test_001"
     assert sub.name == "测试订阅者"
     assert "test" in sub.tags
-    assert sub.is_active == True
+    assert sub.is_active
     
     # 测试心跳
     sub.update_heartbeat()
-    assert sub.is_alive(timeout=60) == True
+    assert sub.is_alive(timeout=60)
     
     print("  ✓ 订阅者功能正常 / Subscriber working correctly")
     return True
@@ -87,7 +87,7 @@ def test_subscriber_manager():
     
     # 注销订阅者
     success = manager.unregister("client_1")
-    assert success == True
+    assert success
     assert manager.count() == 1
     
     print("  ✓ 订阅者管理器功能正常 / Subscriber manager working correctly")
