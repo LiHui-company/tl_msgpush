@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天消息 - TL_MSPUSH</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        /* 页面特定样式 */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 60px); /* 减去header高度 */
+            padding: 20px;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 左侧展示区域 */
+        .preview-pane {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f5f5f5;
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        /* 手机模拟器 - 适配 Xiaomi 15 Pro (20:9 比例) */
+        .phone-mockup {
+            width: 320px;
+            height: 711px; /* 320 * (3200/1440) ≈ 711 */
+            background-color: #333;
+            border-radius: 35px;
+            padding: 10px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            border-radius: 25px;
+            overflow: hidden;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* 场景1：未打开App (锁屏/系统通知) */
+        .scenario-system {
+            background-image: url('../interactive_messages/assets/desktop.jpg');
+            background-size: cover;
+            background-position: center;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px; /* 调整顶部间距 */
+        }
+
+        /* 消息首页视图 */
+        .message-index-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('../interactive_messages/assets/msgidx.jpg');
+            background-size: cover;
+            background-position: center;
+            z-index: 50;
+            display: none;
+        }
+
+        .system-notification {
+            width: 92%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px; /* 更圆润 */
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            animation: slideDown 0.5s ease-out;
+            cursor: pointer;
+            transition: transform 0.1s;
+            z-index: 1000; /* 确保在最上层 */
+        }
+
+        .system-notification:active {
+            transform: scale(0.98);
+        }
+
+        .notif-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .notif-app-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .notif-app-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .notif-content {
+            font-size: 15px;
+            color: #333;
+            line-height: 1.4;
+            white-space: pre-wrap; /* 支持换行 */
+        }
+
+        /* 场景2：打开App (应用内) */
+        .scenario-inapp {
+            background-image: url('../interactive_messages/assets/tlsq.jpg');
+            background-size: cover;
+            background-position: center;
+            height: 100%;
+            display: none;
+            position: relative;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px; /* 与系统通知一致 */
+        }
+
+        /* 聊天详情页视图 */
+        .chat-detail-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .chat-header {
+            height: 50px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            background: #fff;
+            flex-shrink: 0;
+        }
+
+        .back-btn {
+            font-size: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .chat-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .chat-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chat-bubble {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .chat-bubble.received {
+            align-self: flex-start;
+            background: #fff;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .chat-bubble.sent {
+            align-self: flex-end;
+            background: #95ec69;
+            border-bottom-right-radius: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* 右侧控制区域 */
+        .control-pane {
+            flex: 1;
+            padding: 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .scenario-block {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .scenario-block:hover {
+            border-color: #b3d7ff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+        }
+
+        .scenario-block.active {
+            border-color: #007bff;
+            background-color: #f0f7ff;
+        }
+
+        .main-scenario-btn {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .main-scenario-btn:hover {
+            background: #0056b3;
+        }
+
+        .main-scenario-btn::after {
+            content: '👉';
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .scenario-block:hover .main-scenario-btn::after {
+            opacity: 1;
+        }
+
+        .message-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .msg-btn {
+            padding: 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .msg-btn:hover {
+            border-color: #007bff;
+            color: #007bff;
+            background: #fff;
+        }
+
+        .msg-btn:active {
+            transform: scale(0.98);
+        }
+
+        .logic-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            margin-top: auto;
+        }
+
+        .logic-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .logic-content {
+            font-family: monospace;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideUpFadeOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-20px); opacity: 0; }
+        }
+
+        .anim-disappear {
+            animation: slideUpFadeOut 0.3s ease-in forwards;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>聊天消息演示</h1>
+    </header>
+    <nav>
+        <a href="../directory/index.html">返回目录</a>
+    </nav>
+
+    <div class="main-container">
+        <!-- 左侧模拟器 -->
+        <div class="preview-pane">
+            <div class="phone-mockup">
+                <div class="phone-screen">
+                    <!-- 消息首页视图 (默认隐藏) -->
+                    <div id="message-index-view" class="message-index-view"></div>
+
+                    <!-- 聊天详情页视图 (默认隐藏) -->
+                    <div id="chat-detail-view" class="chat-detail-view">
+                        <div class="chat-header">
+                            <span class="back-btn" onclick="closeChat()">←</span>
+                            <span class="chat-title" id="chat-title">慧慧</span>
+                        </div>
+                        <div class="chat-content" id="chat-content">
+                            <!-- 内容由JS注入 -->
+                        </div>
+                    </div>
+
+                    <!-- 场景1：系统通知 -->
+                    <div id="scenario-system" class="scenario-system">
+                        <div class="system-notification" id="sys-notif" style="display: none;" onclick="openChat(this)">
+                            <div class="notif-header">
+                                <div class="notif-app-info">
+                                    <img src="../interactive_messages/assets/tllogo.png" alt="Logo" class="notif-app-icon" onerror="this.style.display='none'">
+                                    <span>推栏</span>
+                                </div>
+                                <span>现在</span>
+                            </div>
+                            <div class="notif-content" id="sys-notif-text">
+                                <!-- 内容由JS注入 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 场景2：App内 -->
+                    <div id="scenario-inapp" class="scenario-inapp">
+                        <!-- 使用与系统通知一致的顶部横幅 -->
+                        <div class="system-notification" id="inapp-notif" style="display: none;" onclick="openChat(this)">
+                            <!-- In-App 场景下不显示 Header -->
+                            <div class="notif-content" id="inapp-notif-text">
+                                <!-- 内容由JS注入 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧控制区 -->
+        <div class="control-pane">
+            
+            <!-- 场景1：未打开App -->
+            <div class="scenario-block" id="block-system">
+                <button class="main-scenario-btn" onclick="switchScenario('system')">
+                    1. 未打开App时
+                </button>
+                <div class="message-buttons">
+                    <button class="msg-btn" onclick="triggerMessage('system')">💬 发送聊天消息</button>
+                </div>
+            </div>
+
+            <!-- 场景2：打开App -->
+            <div class="scenario-block" id="block-inapp">
+                <button class="main-scenario-btn" onclick="switchScenario('inapp')">
+                    2. 打开App未在当前页面
+                </button>
+                <div class="message-buttons">
+                    <button class="msg-btn" onclick="triggerMessage('inapp')">💬 发送聊天消息 (支持连点)</button>
+                </div>
+            </div>
+
+            <div class="logic-display">
+                <div class="logic-title" id="logic-title">逻辑说明</div>
+                <div class="logic-content" id="logic-content">
+                    请点击上方按钮查看不同场景下的推送逻辑和展示效果。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
